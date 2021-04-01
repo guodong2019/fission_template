@@ -1,4 +1,4 @@
-name: fission-test
+name: fission-template
 author: Atlasv, Inc.
 org: Atlasv, Inc.
 description: Deploy a fission cloud function application.
@@ -7,7 +7,7 @@ repo: https://github.com/guodong2019/fission_template
 readme: https://github.com/guodong2019/fission_template/tree/master/README.md
 license: MIT
 src:
-  src: ./
+  src: ./src
   exclude:
     - .env
     - '**/node_modules'
