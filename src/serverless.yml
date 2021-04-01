@@ -21,8 +21,8 @@ provider:
   region: us-central1
   runtime: go113                           # currently both vendored and go.mod repos are supported
   memorySize: 128
-  project: speedtest-reports-255907                   # replace with your project name here
-  credentials: /Users/bruce/sc/atlasv/creds/speedtest-reports-255907-929c6c8a6bbd.json
+  project: 'project_id'                   # replace with your project name here
+  credentials: 'key.json'                 # replace with your project cred json file
 
 functions:
   hello:
