@@ -1,0 +1,31 @@
+service: my-http-service
+
+frameworkVersion: "2"
+
+package:
+  exclude:
+    - node_modules/**
+    - .gitignore
+    - .git/**
+
+plugins:
+  - serverless-google-cloudfunctions
+
+# The GCF credentials can be a little tricky to set up. Luckily we've documented this for you here:
+# https://serverless.com/framework/docs/providers/google/guide/credentials/
+#
+# NOTE: the golang runtime is currently in alpha state, you must have access from google to use the alpha toolchain
+provider:
+  name: google
+  stage: dev
+  region: us-central1
+  runtime: go113                           # currently both vendored and go.mod repos are supported
+  memorySize: 128
+  project: speedtest-reports-255907                   # replace with your project name here
+  credentials: /Users/bruce/sc/atlasv/creds/speedtest-reports-255907-929c6c8a6bbd.json
+
+functions:
+  hello:
+    handler: Hello
+    events:
+      - http: path

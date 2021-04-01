@@ -1,0 +1,9 @@
+{
+  "name": "my-http-service",
+  "version": "0.0.1",
+  "description": "Example demonstrates how to setup a simple HTTP GET endpoint with golang",
+  "license": "MIT",
+  "dependencies": {
+    "serverless-google-cloudfunctions": "^3.1.1"
+  }
+}

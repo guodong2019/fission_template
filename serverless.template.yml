@@ -1,0 +1,14 @@
+name: fission-test
+author: Atlasv, Inc.
+org: Atlasv, Inc.
+description: Deploy a fission cloud function application.
+keywords: serverless, cloud function, golang, fission
+repo: https://github.com/guodong2019/fission_template
+readme: https://github.com/guodong2019/fission_template/tree/master/README.md
+license: MIT
+src:
+  src: ./
+  exclude:
+    - .env
+    - '**/node_modules'
+    - '**/package-lock.json'
