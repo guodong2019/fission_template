@@ -1,5 +1,5 @@
 {
-  "name": "fission-service",
+  "name": "my-http-service",
   "version": "0.0.1",
   "description": "Example demonstrates how to setup a simple HTTP GET endpoint with golang",
   "license": "MIT",
