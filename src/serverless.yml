@@ -1,4 +1,4 @@
-service: my-http-service
+service: fission-service
 
 frameworkVersion: "2"
 
@@ -11,21 +11,34 @@ package:
 plugins:
   - serverless-google-cloudfunctions
 
+custom:
+  GCP_PROJECT: ${opt:GCP_PROJECT}
+  GCP_CREDS: ${opt:GCP_CREDS}
+
 # The GCF credentials can be a little tricky to set up. Luckily we've documented this for you here:
 # https://serverless.com/framework/docs/providers/google/guide/credentials/
-#
-# NOTE: the golang runtime is currently in alpha state, you must have access from google to use the alpha toolchain
 provider:
   name: google
   stage: dev
   region: us-central1
   runtime: go113                           # currently both vendored and go.mod repos are supported
   memorySize: 128
-  project: 'project_id'                   # replace with your project name here
-  credentials: 'key.json'                 # replace with your project cred json file
+  project: ${self:custom.GCP_PROJECT}
+  credentials: /Users/bruce/sc/atlasv/creds/speedtest-reports-255907-929c6c8a6bbd.json
+  environment:
+    GCP_PROJECT: ${self:custom.GCP_PROJECT}
 
 functions:
-  hello:
-    handler: Hello
-    events:
-      - http: path
+  - ${file(./referral/serverless.yml)}
+  - ${file(./bonus/serverless.yml)}
+  # referral:
+  #   handler: referral.referral_functions.HelloReferral
+  #   events:
+  #     - http: path
+
+  # bonus:
+  #   handler: bonus.bonus_functions.HelloBonus
+  #   events:
+  #     - event:
+  #       eventType: providers/cloud.firestore/eventTypes/document.write
+  #       resource: projects/${self:custom.GCP_PROJECT}/databases/(default)/documents/referral_records/{uid}

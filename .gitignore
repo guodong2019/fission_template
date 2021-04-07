@@ -15,3 +15,7 @@
 # vendor/
 
 .env
+
+**/node_modules/
+
+src/.serverless/

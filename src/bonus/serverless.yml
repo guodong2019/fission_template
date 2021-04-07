@@ -1,0 +1,11 @@
+
+bonus:
+  handler: HelloBonus
+  events:
+      - event:
+          eventType: providers/cloud.firestore/eventTypes/document.write
+          resource: projects/${opt:GCP_PROJECT}/databases/(default)/documents/referral_records/{uid}
+  # events:
+  #     - event:
+  #       eventType: providers/cloud.firestore/eventTypes/document.write
+  #       resource: projects/${opt:GCP_PROJECT}/databases/(default)/documents/referral_records/{uid}
