@@ -29,10 +29,19 @@ functions:
     handler: HelloReferral
     events:
       - http: path
-  
+
   bonus:
     handler: HelloBonus
     events:
-        - event:
-            eventType: providers/cloud.firestore/eventTypes/document.write
-            resource: projects/speedtest-reports-255907/databases/(default)/documents/referral_records/{uid}
+      - event:
+          eventType: providers/cloud.firestore/eventTypes/document.write
+          resource: projects/speedtest-reports-255907/databases/(default)/documents/referral_records/{uid}
+    environment:
+      BonusDays: 3
+      WoolongSharedSecret: TeH2PUwd8ncX8+YrID/FjN6DkEU81wkvXMlzIkw8GCg=
+      WoolongAudience: woolong-v1
+      WoolongAppPlatform: server
+      WoolongKid: DlV1MuHRyGvIw
+      WoolongIssuer: atlasv.api
+      WoolongEntitlementId: premium
+      WoolongEntitlementUrl: https://iap.etm.tech/entitlements
