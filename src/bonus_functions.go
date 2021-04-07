@@ -1,4 +1,4 @@
-package referal
+package fission
 
 import (
 	"bytes"
@@ -6,8 +6,8 @@ import (
 	"net/http"
 )
 
-// HelloReferral is a simple HTTP handler that addresses HTTP requests to the /hello endpoint
-func HelloReferral(w http.ResponseWriter, r *http.Request) {
+// HelloBonus is a simple HTTP handler that addresses HTTP requests to the /hello endpoint
+func HelloBonus(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 
 	body, err := json.Marshal(map[string]interface{}{

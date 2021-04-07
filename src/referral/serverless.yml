@@ -1,6 +1,0 @@
-
-
-referral:
-  handler: HelloReferral
-  events:
-    - http: path

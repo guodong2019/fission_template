@@ -25,5 +25,14 @@ provider:
     GCP_PROJECT: speedtest-reports-255907
 
 functions:
-  - ${file(./referral/serverless.yml)}
-  - ${file(./bonus/serverless.yml)}
+  referral:
+    handler: HelloReferral
+    events:
+      - http: path
+  
+  bonus:
+    handler: HelloBonus
+    events:
+        - event:
+            eventType: providers/cloud.firestore/eventTypes/document.write
+            resource: projects/speedtest-reports-255907/databases/(default)/documents/referral_records/{uid}
