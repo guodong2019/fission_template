@@ -42,6 +42,6 @@ functions:
       WoolongEntitlementUrl: "https://iap.etm.tech/entitlements"
     events:
       - event:
-          eventType: providers/cloud.firestore/eventTypes/document.write
+          eventType: providers/cloud.firestore/eventTypes/document.create
           resource: projects/speedtest-reports-255907/databases/(default)/documents/referral_records/{uid}
     

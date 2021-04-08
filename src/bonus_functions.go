@@ -20,7 +20,8 @@ import (
 // ToDo:
 // firestore write trigger;
 // create update delete trigger bonus action;
-// avoid repeated trigger
+// avoid repeated trigger, temporary only open create trigger
+// bonus condition may need update trigger
 
 // bonus direction:
 //     referredbyuid    uid
