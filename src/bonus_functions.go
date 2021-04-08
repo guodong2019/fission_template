@@ -17,37 +17,69 @@ import (
 	"cloud.google.com/go/firestore"
 )
 
+// ToDo:
+// firestore write trigger;
+// create update delete trigger bonus action;
+// avoid repeated trigger
+
+// bonus direction:
+//     referredbyuid    uid
+//            2          1
+// bidirectional: 3 = 1 + 2
+// 1. unidirectional_uid
+// 2. unidirectional_referredbyuid
+// 3. bidirectional (default)
+
+// bonus conditon:
+// 1. immediately
+// 2. ontime
+
 // bonus type
-// unidirectional
-// bidirectional
-// realtime
-// ontime
+// 1. daily: 86400
+// 2. three_day: 86400 * 3
+// 3. weekly:
+// 4. monthly:
+// 5. six_month:
+// 6. yearly:
+// 7. lifetime:
+// ...
 
 const (
 	referralRecordsCollection = "referral_records"
 	bonusHistoryCollection    = "bonus_history"
-	dftBonusDays              = "3"
-	dftBonusDuration          = "three_day"
 )
 
 // GOOGLE_CLOUD_PROJECT is automatically set by the Cloud Functions runtime.
 var gcpProjectID = os.Getenv("GCP_PROJECT")
-var bonusDaysEnv = os.Getenv("BonusDays")
 
 var (
-	berr      error
-	bonusDays int64
-	client    *firestore.Client
+	berr   error
+	client *firestore.Client
 )
+
+var bonusTypeTimeRef = map[string]int64{
+	"1": 86400,
+	"2": 86400 * 3,
+	"3": 86400 * 7,
+	"4": 86400 * 30,
+	"5": 86400 * 30 * 6,
+	"6": 86400 * 365,
+	"7": 86400 * 365 * 10,
+}
+var bonusTypeDurationRef = map[string]string{
+	"1": "daily",
+	"2": "three_day",
+	"3": "weekly",
+	"4": "monthly",
+	"5": "six_month",
+	"6": "yearly",
+	"7": "lifetime",
+}
 
 func init() {
 	if gcpProjectID == "" {
 		log.Fatal("PROJECT_ID environment variable must be set.")
 	}
-	if bonusDaysEnv == "" {
-		bonusDaysEnv = dftBonusDays
-	}
-	bonusDays, _ = strconv.ParseInt(bonusDaysEnv, 10, 64)
 
 	ctx := context.Background()
 
@@ -82,15 +114,20 @@ type ReferralRecordData struct {
 	UpdatedAt struct {
 		IntegerValue string `json:"integerValue"`
 	} `json:"updatedAt"`
-
 	Uid struct {
 		StringValue string `json:"stringValue"`
 	} `json:"uid"`
 	ReferredByUid struct {
 		StringValue string `json:"stringValue"`
 	} `json:"referred_by_uid"`
+	BonusCondition struct {
+		IntegerValue string `json:"integerValue"`
+	} `json:"bonus_condition"`
+	BonusDirection struct {
+		IntegerValue string `json:"integerValue"`
+	} `json:"bonus_direction"`
 	BonusType struct {
-		StringValue string `json:"stringValue"`
+		IntegerValue string `json:"integerValue"`
 	} `json:"bonus_type"`
 	Level struct {
 		IntegerValue string `json:"integerValue"`
@@ -103,26 +140,28 @@ type ReferralRecordData struct {
 type (
 	// ReferralRecordDoc ...
 	ReferralRecordDoc struct {
-		CreatedAt                   int64  `firestore:"createdAt" json:"createdAt"`
-		UpdatedAt                   int64  `firestore:"updatedAt" json:"updatedAt"`
+		CreatedAt                   int64  `firestore:"created_at" json:"created_at"`
+		UpdatedAt                   int64  `firestore:"updated_at" json:"updated_at"`
 		Uid                         string `firestore:"uid" json:"uid"`
 		ReferredByUid               string `firestore:"referred_by_uid" json:"referred_by_uid"`
-		BonusType                   string `firestore:"bonus_type" json:"bonus_type"`
+		BonusCondition              int    `firestore:"bonus_condition" json:"bonus_condition"`
+		BonusDirection              int    `firestore:"bonus_direction" json:"bonus_direction"`
+		BonusType                   int    `firestore:"bonus_type" json:"bonus_type"`
 		Level                       int64  `firestore:"level" json:"level"`
 		IsIntegratedPurchaseService bool   `firestore:"is_integrated_purchase_service" json:"is_integrated_purchase_service"`
 	}
 
 	// BonusItem ...
 	BonusItem struct {
-		CreatedAt  int64  `firestore:"createdAt" json:"createdAt"`
-		StartedAt  int64  `firestore:"startedAt" json:"startedAt"`
-		BonusType  string `firestore:"bonus_type" json:"bonus_type"`
-		ExpireTime int64  `firestore:"expire_time" json:"expire_time"`
+		ReferraledAt int64  `firestore:"referraled_at" json:"referraled_at"`
+		StartedAt    int64  `firestore:"started_at" json:"started_at"`
+		BonusType    string `firestore:"bonus_type" json:"bonus_type"`
+		ExpireTime   int64  `firestore:"expire_time" json:"expire_time"`
 	}
 	// BonusHistory ...
 	BonusHistory struct {
-		CreatedAt int64       `firestore:"createdAt" json:"createdAt"`
-		UpdatedAt int64       `firestore:"updatedAt" json:"updatedAt"`
+		CreatedAt int64       `firestore:"created_at" json:"created_at"`
+		UpdatedAt int64       `firestore:"updated_at" json:"updated_at"`
 		Uid       string      `firestore:"uid" json:"uid"`
 		ExpiredAt int64       `firestore:"expired_at" json:"expired_at"`
 		Bonuses   []BonusItem `firestore:"bonuses" json:"bonuses"`
@@ -168,7 +207,9 @@ func HelloBonus(ctx context.Context, e FirestoreEvent) error {
 	createdAt, _ := strconv.ParseInt(createdAtStr, 10, 64)
 	uid := e.Value.Fields.Uid.StringValue
 	referredByUid := e.Value.Fields.ReferredByUid.StringValue
-	bonusType := e.Value.Fields.BonusType.StringValue
+	bonusCondition := e.Value.Fields.BonusCondition.IntegerValue
+	bonusDirection := e.Value.Fields.BonusDirection.IntegerValue
+	bonusType := e.Value.Fields.BonusType.IntegerValue
 	isIntegratedPurchaseService := e.OldValue.Fields.IsIntegratedPurchaseService.BooleanValue
 
 	// todo: level trigger
@@ -176,55 +217,64 @@ func HelloBonus(ctx context.Context, e FirestoreEvent) error {
 	level, _ := strconv.ParseInt(levelValue, 10, 64)
 	log.Println("level value=", level)
 
-	// referralRecord, _ := client.Collection(referralCollection).Doc(uid).Get(ctx)
-	// if referralRecord.Exists() {
-	// 	log.Printf("referral record already existed, record=%v\n", referralRecord)
-	// 	fmt.Fprintf(w, dftErrResponse, "UID Exists")
-	// 	return
-	// }
-
-	bts := strings.Split(bonusType, "_")
-	direction := bts[0]
-	timeCond := bts[1]
-	log.Printf("direction=%v, timecond=%v\n", direction, timeCond)
-
-	switch direction {
-	case "unidirectional":
-		log.Println("unidirectional")
-		bonusUser(bonusType, uid, timeCond, createdAt, isIntegratedPurchaseService)
-	case "bidirectional":
-		log.Println("bidirectional")
-		bonusUser(bonusType, uid, timeCond, createdAt, isIntegratedPurchaseService)
-		bonusUser(bonusType, referredByUid, timeCond, createdAt, isIntegratedPurchaseService)
+	switch bonusDirection {
+	case "1":
+		log.Println("unidirectional uid")
+		bonusUser(uid, bonusCondition, bonusType, createdAt, isIntegratedPurchaseService)
+	case "2":
+		log.Println("unidirectional referredbyuid")
+		bonusUser(referredByUid, bonusCondition, bonusType, createdAt, isIntegratedPurchaseService)
+	case "3":
+		log.Println("bidirectional, both uid and referredbyuid")
+		bonusUser(uid, bonusCondition, bonusType, createdAt, isIntegratedPurchaseService)
+		bonusUser(referredByUid, bonusCondition, bonusType, createdAt, isIntegratedPurchaseService)
 	}
 
 	return nil
 }
 
-func bonusUser(bonusType, uid, timeCond string, createdAt int64, isIntegratedPurchaseService bool) error {
+func bonusUser(userId string, bonusCondition, bonusType string, referraledAt int64, isIntegratedPurchaseService bool) error {
+	// bonusCondition
+	// todo, support condition
+
 	ctx := context.Background()
-	dsnap, err := client.Collection(bonusHistoryCollection).Doc(uid).Get(ctx)
+
+	dsnap, err := client.Collection(bonusHistoryCollection).Doc(userId).Get(ctx)
 	if err != nil {
-		log.Printf("get archive update error=%v\n", err)
+		log.Printf("get bonus doc error=%v\n", err)
 	}
 
 	var bhDoc BonusHistory
-	dsnap.DataTo(&bhDoc)
-	log.Printf("Document data: %#v\n", bhDoc)
 
+	now := time.Now().Unix()
+	bonusTypeTime := bonusTypeTimeRef[bonusType]
 	item := BonusItem{
-		CreatedAt:  createdAt,
-		StartedAt:  time.Now().Unix(),
-		BonusType:  bonusType,
-		ExpireTime: bonusDays,
+		ReferraledAt: referraledAt,
+		StartedAt:    now,
+		BonusType:    bonusType,
+		ExpireTime:   bonusTypeTime,
 	}
+
+	if !dsnap.Exists() {
+		bhDoc.CreatedAt = now
+		bhDoc.UpdatedAt = now
+		bhDoc.Uid = userId
+		bhDoc.ExpiredAt = bonusTypeTime
+	} else {
+		dsnap.DataTo(&bhDoc)
+		log.Printf("Document raw data: %#v\n", bhDoc)
+		bhDoc.UpdatedAt = now
+		bhDoc.ExpiredAt = bhDoc.ExpiredAt + bonusTypeTime
+	}
+
 	// append bonus record
 	bhDoc.Bonuses = append(bhDoc.Bonuses, item)
-	// todo, update expired_at
-	client.Collection(bonusHistoryCollection).Doc(uid).Set(ctx, bhDoc)
+	log.Printf("Document after data: %#v\n", bhDoc)
+
+	client.Collection(bonusHistoryCollection).Doc(userId).Set(ctx, bhDoc)
 
 	if isIntegratedPurchaseService {
-		bonusUserByPurchaseService(uid, dftBonusDuration)
+		bonusUserByPurchaseService(userId, bonusTypeDurationRef[bonusType])
 	}
 	return nil
 }
@@ -232,12 +282,8 @@ func bonusUser(bonusType, uid, timeCond string, createdAt int64, isIntegratedPur
 // genToken generate sign token
 func genToken() (tokenStr string, err error) {
 	sharedSecret := os.Getenv("WoolongSharedSecret")
-
 	appVersion := os.Getenv("WoolongAppVersion")
 	appPlatform := os.Getenv("WoolongAppPlatform")
-
-	// change expire time in seconds
-	// expireInSecs := os.Getenv("woolong.expireInMilSecs")
 
 	// Create the Claims
 	claims := JwtCustomClaims{
@@ -248,7 +294,7 @@ func genToken() (tokenStr string, err error) {
 		KID: os.Getenv("WoolongKid"),
 		StandardClaims: jwt.StandardClaims{
 			Issuer:    os.Getenv("WoolongIssuer"),
-			ExpiresAt: time.Now().Unix() + 86400,
+			ExpiresAt: time.Now().Unix() + 86400*2,
 			Audience:  os.Getenv("WoolongAudience"),
 		},
 	}

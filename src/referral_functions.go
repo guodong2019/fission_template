@@ -35,10 +35,22 @@ var (
 // GOOGLE_CLOUD_PROJECT is automatically set by the Cloud Functions runtime.
 var projectID = os.Getenv("GCP_PROJECT")
 
+var bonusTypeRef = map[int]string{
+	1: "daily",
+	2: "three_day",
+	3: "weekly",
+	4: "monthly",
+	5: "six_month",
+	6: "yearly",
+	7: "lifetime",
+}
+
 type (
 	requestPayload struct {
 		ReferredByUid               string `json:"referred_by_uid"`
-		BonusType                   string `json:"bonus_type"`
+		BonusCondition              int    `json:"bonus_condition"`
+		BonusDirection              int    `json:"bonus_direction"`
+		BonusType                   int    `json:"bonus_type"`
 		IsIntegratedPurchaseService bool   `json:"is_integrated_purchase_service"`
 	}
 
@@ -47,7 +59,9 @@ type (
 		UpdatedAt                   int64  `firestore:"updatedAt" json:"updatedAt"`
 		Uid                         string `firestore:"uid" json:"uid"`
 		ReferredByUid               string `firestore:"referred_by_uid" json:"referred_by_uid"`
-		BonusType                   string `firestore:"bonus_type" json:"bonus_type"`
+		BonusCondition              int    `firestore:"bonus_condition" json:"bonus_condition"`
+		BonusDirection              int    `firestore:"bonus_direction" json:"bonus_direction"`
+		BonusType                   int    `firestore:"bonus_type" json:"bonus_type"`
 		Level                       int64  `firestore:"level" json:"level"`
 		IsIntegratedPurchaseService bool   `firestore:"is_integrated_purchase_service" json:"is_integrated_purchase_service"`
 	}
@@ -109,6 +123,13 @@ func HelloReferral(w http.ResponseWriter, r *http.Request) {
 	log.Printf("request payload=%v\n", payload)
 	defer r.Body.Close()
 
+	_, ok := bonusTypeRef[payload.BonusType]
+	if !ok {
+		log.Printf("invalid bonus type=%v\n", payload.BonusType)
+		fmt.Fprintf(w, dftErrResponse, "Invalid Request Payload, bonus type not support.")
+		return
+	}
+
 	referralRecord, _ := dbClient.Collection(referralCollection).Doc(uid).Get(ctx)
 	if referralRecord.Exists() {
 		log.Printf("referral record already existed, record=%v\n", referralRecord)
@@ -116,11 +137,14 @@ func HelloReferral(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	now := time.Now().Unix()
 	record := ReferralRecord{
-		CreatedAt:                   time.Now().Unix(),
-		UpdatedAt:                   time.Now().Unix(),
+		CreatedAt:                   now,
+		UpdatedAt:                   now,
 		Uid:                         uid,
 		ReferredByUid:               payload.ReferredByUid,
+		BonusCondition:              payload.BonusCondition,
+		BonusDirection:              payload.BonusDirection,
 		BonusType:                   payload.BonusType,
 		IsIntegratedPurchaseService: payload.IsIntegratedPurchaseService,
 	}
