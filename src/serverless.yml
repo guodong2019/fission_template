@@ -11,6 +11,10 @@ package:
 plugins:
   - serverless-google-cloudfunctions
 
+custom:
+  defaultStage: dev
+  currentStage: ${opt:stage, self:custom.defaultStage}
+
 # The GCF credentials can be a little tricky to set up. Luckily we've documented this for you here:
 # https://serverless.com/framework/docs/providers/google/guide/credentials/
 provider:
@@ -19,10 +23,10 @@ provider:
   region: us-central1
   runtime: go113                           # currently both vendored and go.mod repos are supported
   memorySize: 128
-  project: speedtest-reports-255907
-  credentials: /Users/bruce/sc/atlasv/creds/speedtest-reports-255907-929c6c8a6bbd.json
+  project: ${file(./.env.${self:custom.currentStage}.json):PROJECT}
+  credentials: ${file(./.env.${self:custom.currentStage}.json):GCP_CREDS}
   environment:
-    GCP_PROJECT: speedtest-reports-255907
+    GCP_PROJECT: ${file(./.env.${self:custom.currentStage}.json):GCP_PROJECT}
 
 functions:
   referral:
@@ -33,15 +37,15 @@ functions:
   bonus:
     handler: HelloBonus
     environment:
-      WoolongSharedSecret: "TeH2PUwd8ncX8+YrID/FjN6DkEU81wkvXMlzIkw8GCg="
-      WoolongAudience: "woolong-v1"
-      WoolongAppPlatform: "cloudfunction"
-      WoolongKid: "DlV1MuHRyGvIw"
-      WoolongIssuer: "atlasv.api"
-      WoolongEntitlementId: "premium"
-      WoolongEntitlementUrl: "https://iap.etm.tech/entitlements"
+      WoolongSharedSecret: ${file(./.env.${self:custom.currentStage}.json):WoolongSharedSecret}
+      WoolongAudience: ${file(./.env.${self:custom.currentStage}.json):WoolongAudience}
+      WoolongAppPlatform: ${file(./.env.${self:custom.currentStage}.json):WoolongAppPlatform}
+      WoolongKid: ${file(./.env.${self:custom.currentStage}.json):WoolongKid}
+      WoolongIssuer: ${file(./.env.${self:custom.currentStage}.json):WoolongIssuer}
+      WoolongEntitlementId: ${file(./.env.${self:custom.currentStage}.json):WoolongEntitlementId}
+      WoolongEntitlementUrl: ${file(./.env.${self:custom.currentStage}.json):WoolongEntitlementUrl}
     events:
       - event:
           eventType: providers/cloud.firestore/eventTypes/document.create
-          resource: projects/speedtest-reports-255907/databases/(default)/documents/referral_records/{uid}
+          resource: projects/${file(./.env.${self:custom.currentStage}.json):GCP_PROJECT}/databases/(default)/documents/referral_records/{uid}
     
